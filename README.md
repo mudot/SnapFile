@@ -88,7 +88,7 @@ UI shortcuts:
 ## Demo
 
 <p align="center">
-  <img src="docs/snapfile-demo.gif" alt="SnapFile demo" width="600" />
+  <img src="docs/ySRgU.gif" alt="SnapFile demo" width="600" />
 </p>
 
 ---
