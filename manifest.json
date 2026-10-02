@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "SnapFile",
+  "version": "0.6.1",
+  "description": "Anexe downloads e imagens do clipboard em qualquer upload — rápido, local e visual.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "SnapFile",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "permissions": [
+    "downloads",
+    "storage",
+    "unlimitedStorage",
+    "clipboardRead",
+    "activeTab",
+    "scripting",
+    "identity"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "file:///*",
+    "https://www.googleapis.com/*",
+    "https://accounts.google.com/*"
+  ],
+  "oauth2": {
+    "client_id": "647607597850-6temqped9v01g45hk60tr71s80rul0c5.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive.readonly"
+    ]
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}
