@@ -81,7 +81,15 @@ UI shortcuts:
 - **Click** an item → focus + preview  
 - **Enter** / **Use file** / double-click → attach  
 - **Esc** → close  
-- **Choose from computer…** → native system picker  
+- **Choose from computer…** → native system picker
+
+---
+
+## Demo
+
+<p align="center">
+  <img src="docs/snapfile-demo.gif" alt="SnapFile demo" width="600" />
+</p>
 
 ---
 
