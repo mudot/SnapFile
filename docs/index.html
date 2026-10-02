@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SnapFile — Anexe arquivos em um clique</title>
+  <meta name="description" content="SnapFile é uma extensão de navegador que anexa downloads recentes, imagens do clipboard e arquivos do Google Drive em qualquer campo de upload." />
+  <meta property="og:title" content="SnapFile" />
+  <meta property="og:description" content="Anexe downloads, clipboard e Google Drive em qualquer upload — rápido e local-first." />
+  <meta property="og:image" content="logo.png" />
+  <link rel="icon" href="icon.png" type="image/png" />
+  <style>
+    :root {
+      --bg: #070a12;
+      --surface: #0f1524;
+      --surface2: #161e30;
+      --border: #243049;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --grad: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    a { color: #93c5fd; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .nav {
+      position: sticky; top: 0; z-index: 20;
+      backdrop-filter: blur(12px);
+      background: rgba(7, 10, 18, 0.85);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: 1100px; margin: 0 auto;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; color: var(--text); text-decoration: none; }
+    .brand img { width: 36px; height: 36px; border-radius: 10px; }
+    .brand span.file { background: var(--grad); -webkit-background-clip: text; color: transparent; }
+    .nav-links { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+    .nav-links a { color: var(--muted); font-size: 0.92rem; text-decoration: none; }
+    .nav-links a:hover { color: var(--text); }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 0.92rem;
+      border: none; cursor: pointer; text-decoration: none !important;
+    }
+    .btn-primary { background: var(--grad); color: #fff !important; }
+    .btn-primary:hover { filter: brightness(1.08); text-decoration: none; }
+    .btn-ghost {
+      background: transparent; color: var(--text) !important;
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--surface2); text-decoration: none; }
+
+    .hero {
+      max-width: 1100px; margin: 0 auto;
+      padding: 64px 24px 48px;
+      display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px; align-items: center;
+    }
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; padding-top: 40px; }
+      .nav { padding: 12px 16px; }
+    }
+    .badge {
+      display: inline-block; font-size: 0.75rem; letter-spacing: 0.04em;
+      text-transform: uppercase; color: #c4b5fd;
+      background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.35);
+      padding: 4px 10px; border-radius: 999px; margin-bottom: 16px;
+    }
+    h1 {
+      font-size: clamp(2rem, 4vw, 2.75rem);
+      line-height: 1.15; margin-bottom: 16px; font-weight: 800;
+    }
+    h1 .grad { background: var(--grad); -webkit-background-clip: text; color: transparent; }
+    .lead { color: var(--muted); font-size: 1.1rem; margin-bottom: 28px; max-width: 34em; }
+    .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+    .hero-note { font-size: 0.85rem; color: var(--muted); }
+
+    .mock {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(99,102,241,0.08);
+    }
+    .mock-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .mock-bar .left { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.9rem; }
+    .mock-bar img { width: 22px; height: 22px; border-radius: 6px; }
+    .mock-body { display: grid; grid-template-columns: 1fr 1.1fr; min-height: 220px; }
+    @media (max-width: 500px) { .mock-body { grid-template-columns: 1fr; } }
+    .mock-list { border-right: 1px solid var(--border); padding: 10px; }
+    .mock-item {
+      display: flex; gap: 10px; align-items: center;
+      padding: 8px; border-radius: 8px; margin-bottom: 4px; font-size: 0.8rem;
+    }
+    .mock-item.active { background: rgba(99,102,241,0.25); border: 1px solid rgba(99,102,241,0.4); }
+    .thumb {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: var(--grad); flex-shrink: 0;
+    }
+    .mock-preview {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 16px; gap: 10px; color: var(--muted); font-size: 0.85rem;
+    }
+    .preview-box {
+      width: 70%; aspect-ratio: 4/3; border-radius: 10px;
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem;
+    }
+
+    section { max-width: 1100px; margin: 0 auto; padding: 48px 24px; }
+    section h2 { font-size: 1.5rem; margin-bottom: 8px; }
+    section .sub { color: var(--muted); margin-bottom: 28px; }
+
+    .grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    }
+    @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .card .icon { font-size: 1.5rem; margin-bottom: 10px; }
+    .card h3 { font-size: 1.05rem; margin-bottom: 8px; }
+    .card p { color: var(--muted); font-size: 0.92rem; }
+
+    .steps { display: grid; gap: 14px; }
+    .step {
+      display: grid; grid-template-columns: 40px 1fr; gap: 14px; align-items: start;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+    }
+    .step-num {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--grad); display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.95rem;
+    }
+    .step h3 { font-size: 1rem; margin-bottom: 4px; }
+    .step p { color: var(--muted); font-size: 0.9rem; }
+
+    .two-col {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    }
+    @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+    table {
+      width: 100%; border-collapse: collapse; font-size: 0.9rem;
+      background: var(--surface); border-radius: 12px; overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    th { background: var(--surface2); color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    td { color: var(--text); }
+    tr:last-child td { border-bottom: none; }
+
+    .cta-band {
+      margin: 24px auto 0; max-width: 1100px; padding: 0 24px 64px;
+    }
+    .cta-inner {
+      background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.2));
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      border-radius: 16px; padding: 36px 28px; text-align: center;
+    }
+    .cta-inner h2 { margin-bottom: 10px; }
+    .cta-inner p { color: var(--muted); margin-bottom: 20px; }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 24px 40px;
+      max-width: 1100px; margin: 0 auto;
+      display: flex; flex-wrap: wrap; gap: 12px 24px;
+      justify-content: space-between; color: var(--muted); font-size: 0.85rem;
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="./">
+      <img src="logo.png" alt="SnapFile" />
+      Snap<span class="file">File</span>
+    </a>
+    <div class="nav-links">
+      <a href="#recursos">Recursos</a>
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#privacidade">Privacidade</a>
+      <a href="privacy.html">Privacidade</a>
+      <a href="terms.html">Termos</a>
+      <a class="btn btn-primary" href="https://github.com/mudot/SnapFile/" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <div class="badge">Extensão Chromium · Local-first</div>
+      <h1>Anexe arquivos em <span class="grad">um clique</span></h1>
+      <p class="lead">
+        O SnapFile abre no lugar do seletor nativo e oferece downloads recentes,
+        imagens que você copiou e, se quiser, arquivos do Google Drive —
+        com preview antes de enviar.
+      </p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="https://github.com/mudot/SnapFile/" target="_blank" rel="noopener">
+          Ver no GitHub
+        </a>
+        <a class="btn btn-ghost" href="https://github.com/mudot/SnapFile/#readme" target="_blank" rel="noopener">
+          Documentação
+        </a>
+      </div>
+      <p class="hero-note">Chrome, Edge, Brave, Opera, Vivaldi · Drive recomendado no Chrome</p>
+    </div>
+    <div class="mock" aria-hidden="true">
+      <div class="mock-bar">
+        <div class="left">
+          <img src="icon.png" alt="" />
+          Snap<span style="background:linear-gradient(90deg,#60a5fa,#a78bfa);-webkit-background-clip:text;color:transparent">File</span>
+        </div>
+        <span style="color:#64748b;font-size:0.85rem">✕</span>
+      </div>
+      <div class="mock-body">
+        <div class="mock-list">
+          <div class="mock-item active">
+            <div class="thumb"></div>
+            <div>
+              <div>screenshot.png</div>
+              <div style="color:#64748b;font-size:0.7rem">Clipboard · 1.2 MB</div>
+            </div>
+          </div>
+          <div class="mock-item">
+            <div class="thumb" style="background:#334155"></div>
+            <div>
+              <div>relatorio.pdf</div>
+              <div style="color:#64748b;font-size:0.7rem">Download · 840 KB</div>
+            </div>
+          </div>
+          <div class="mock-item">
+            <div class="thumb" style="background:#1e3a5f"></div>
+            <div>
+              <div>foto-drive.jpg</div>
+              <div style="color:#64748b;font-size:0.7rem">Drive · 2.4 MB</div>
+            </div>
+          </div>
+        </div>
+        <div class="mock-preview">
+          <div class="preview-box">🖼️</div>
+          <div>screenshot.png · 1.2 MB</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section id="recursos">
+    <h2>Recursos</h2>
+    <p class="sub">Feito para o momento em que um site pede um arquivo — sem procurar pasta no Explorer.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="icon">📥</div>
+        <h3>Downloads recentes</h3>
+        <p>Detecta arquivos baixados no navegador e os oferece prontos para anexar, com resolução automática do conteúdo quando possível.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📋</div>
+        <h3>Imagens do clipboard</h3>
+        <p>Copiou um print ou uma imagem? Ela pode aparecer no SnapFile para upload imediato, sem salvar no disco.</p>
+      </div>
+      <div class="card">
+        <div class="icon">☁️</div>
+        <h3>Google Drive opcional</h3>
+        <p>Conecte sua conta, escolha um arquivo do Meu Drive e anexe no site. Você controla o login e o logout.</p>
+      </div>
+      <div class="card">
+        <div class="icon">👁️</div>
+        <h3>Preview lateral</h3>
+        <p>Interface lista + preview: confira a imagem antes de confirmar. Enter ou clique para usar.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🔒</div>
+        <h3>Local-first</h3>
+        <p>Downloads e clipboard ficam no seu dispositivo. Não há servidor SnapFile guardando seus arquivos.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📂</div>
+        <h3>Fallback nativo</h3>
+        <p>Prefere o seletor do sistema? “Escolher no computador…” abre o diálogo nativo a qualquer momento.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="como-funciona">
+    <h2>Como funciona</h2>
+    <p class="sub">Fluxo simples, do clique no site até o arquivo no formulário.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h3>Baixe ou copie</h3>
+          <p>Baixe um arquivo no navegador ou copie uma imagem (Ctrl+C / “Copiar imagem”).</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h3>Clique em enviar arquivo</h3>
+          <p>Em qualquer site com campo de upload, o SnapFile abre no lugar do seletor nativo.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h3>Escolha com preview</h3>
+          <p>Veja a lista (Hoje / Ontem), confira o preview e confirme — ou use a aba Drive.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div>
+          <h3>Upload normal</h3>
+          <p>O arquivo vai para o <code>input</code> da página com os eventos padrão. O site recebe como um anexo comum.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="instalacao">
+    <h2>Instalação (desenvolvedor)</h2>
+    <p class="sub">Enquanto a extensão não está na Chrome Web Store, carregue a partir do repositório.</p>
+    <div class="two-col">
+      <div class="card">
+        <h3>Load unpacked</h3>
+        <p style="margin-top:8px">
+          1. Clone ou baixe o repositório<br />
+          2. Abra <code>chrome://extensions</code><br />
+          3. Ative o Modo do desenvolvedor<br />
+          4. “Carregar sem compactação” → pasta do projeto<br />
+          5. Opcional: permita acesso a URLs de arquivo
+        </p>
+      </div>
+      <div class="card">
+        <h3>Google Drive</h3>
+        <p style="margin-top:8px">
+          Configure um OAuth Client ID no Google Cloud (tipo Extensão do Chrome),
+          ative a Drive API e coloque o client ID no <code>manifest.json</code>.
+          Detalhes no README do repositório.
+        </p>
+      </div>
+    </div>
+    <p style="margin-top:20px">
+      <a class="btn btn-primary" href="https://github.com/mudot/SnapFile/" target="_blank" rel="noopener">Abrir github.com/mudot/SnapFile</a>
+    </p>
+  </section>
+
+  <section id="privacidade">
+    <h2>Privacidade e Google APIs</h2>
+    <p class="sub">Transparência alinhada à política de dados de usuário das Google API Services (Limited Use).</p>
+    <table>
+      <thead>
+        <tr><th>Dado</th><th>Uso</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Downloads do navegador</td>
+          <td>Metadados e conteúdo local para reanexar arquivos — só no seu dispositivo</td>
+        </tr>
+        <tr>
+          <td>Clipboard</td>
+          <td>Apenas imagens, quando você copia ou abre o SnapFile</td>
+        </tr>
+        <tr>
+          <td>Google Drive</td>
+          <td>Somente após “Conectar”; lista e baixa o arquivo que você escolher para o upload</td>
+        </tr>
+        <tr>
+          <td>Servidores SnapFile</td>
+          <td>Não armazenamos seus arquivos em servidor nosso</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:16px;color:var(--muted);font-size:0.92rem">
+      Escopo OAuth: <code>drive.readonly</code> — necessário para listar arquivos do Meu Drive.
+      Política completa: <a href="privacy.html">Privacidade</a> · <a href="terms.html">Termos de Serviço</a>.
+      Você pode revogar o acesso em
+      <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Conta Google → Acesso de apps</a>.
+    </p>
+  </section>
+
+  <div class="cta-band">
+    <div class="cta-inner">
+      <h2>Código aberto no GitHub</h2>
+      <p>Issues, PRs e o código-fonte da extensão estão em mudot/SnapFile.</p>
+      <a class="btn btn-primary" href="https://github.com/mudot/SnapFile/" target="_blank" rel="noopener">github.com/mudot/SnapFile</a>
+    </div>
+  </div>
+
+  <footer>
+    <div>© SnapFile · <a href="https://github.com/mudot/SnapFile/">GitHub</a></div>
+    <div>
+      <a href="privacy.html">Privacidade</a> ·
+      <a href="terms.html">Termos</a> ·
+      <a href="https://github.com/mudot/SnapFile/#readme">README</a>
+    </div>
+  </footer>
+</body>
+</html>
